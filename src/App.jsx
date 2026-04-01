@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { TopicExplorer } from './pages/TopicExplorer';
 import { TopicDetail } from './pages/TopicDetail';
 import { Quiz } from './pages/Quiz';
+import { ExamPrep } from './pages/ExamPrep';
 import { useProgress } from './hooks/useProgress';
 import { useTheme } from './hooks/useTheme';
 
@@ -51,6 +52,7 @@ export default function App() {
               <TopicDetail progress={progress} setTopicStatus={setTopicStatus} />
             } />
             <Route path="/quiz" element={<Quiz />} />
+            <Route path="/exam-prep" element={<ExamPrep />} />
           </Routes>
         </main>
       </div>

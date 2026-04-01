@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import { QUESTIONS } from '../data/questions';
 import { TOPICS } from '../data/topics';
 import { DifficultyBadge } from '../components/DifficultyBadge';
@@ -271,12 +271,27 @@ function QuizSetup({ onStart, initialTopicId }) {
 
 export function Quiz() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const initialTopicId = searchParams.get('topic') ?? undefined;
 
-  const [phase, setPhase]       = useState('setup');   // 'setup' | 'active' | 'results'
-  const [items, setItems]       = useState([]);
+  // When navigated from ExamPrep, location.state carries { questionIds, label }
+  const examPrepState = location.state ?? null;
+
+  const [phase, setPhase]       = useState(() => examPrepState?.questionIds ? 'active' : 'setup');
+  const [quizLabel, setQuizLabel] = useState(examPrepState?.label ?? null);
+  const [items, setItems]       = useState(() => {
+    if (examPrepState?.questionIds) {
+      const pool = QUESTIONS.filter(q => examPrepState.questionIds.includes(q.id));
+      return buildQuizItems(shuffle(pool));
+    }
+    return [];
+  });
   const [current, setCurrent]   = useState(0);
-  const [userAnswers, setUA]    = useState([]);
+  const [userAnswers, setUA]    = useState(() =>
+    examPrepState?.questionIds
+      ? new Array(QUESTIONS.filter(q => examPrepState.questionIds.includes(q.id)).length).fill(null)
+      : []
+  );
 
   const startQuiz = useCallback((pool, count) => {
     const selected = buildQuizItems(pool.slice(0, count === pool.length ? pool.length : count));
@@ -332,6 +347,10 @@ export function Quiz() {
     return <QuizSetup onStart={startQuiz} initialTopicId={initialTopicId} />;
   }
 
+  const handleExitToExamPrep = () => {
+    window.history.back();
+  };
+
   if (phase === 'results') {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -354,14 +373,22 @@ export function Quiz() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => setPhase('setup')} className="btn-ghost text-sm flex items-center gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => examPrepState ? handleExitToExamPrep() : setPhase('setup')}
+          className="btn-ghost text-sm flex items-center gap-1 flex-shrink-0"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Exit
         </button>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        {quizLabel && (
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full truncate">
+            {quizLabel}
+          </span>
+        )}
+        <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
           Score: {userAnswers.filter((a, i) => a !== null && a === items[i].shuffledAnswer).length} / {userAnswers.filter((a) => a !== null).length}
         </span>
       </div>
